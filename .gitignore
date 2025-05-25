@@ -1,0 +1,37 @@
+# Binaries for programs and plugins
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test binary, generated with `go test -c`
+*.test
+# Output of the go toolchain, e.g. `go build -o out/`
+/out/
+
+# Dependency directories (remove the comment below to include it in your .gitignore file)
+# vendor/
+
+# Go module cache
+# go.sum - This is usually committed, but if you prefer not to, uncomment it.
+# go.mod - This is always committed.
+
+# Editor directories and files
+.idea/
+.vscode/
+*.swp
+*.bak
+*.swo
+*~
+*.log
+.DS_Store
+
+# Environment variables / API keys
+# Firebase service account key
+firebase-service-account-key.json
+
+# If you store other sensitive files in the root, add them here:
+# .env
+# config.yaml
+
+firebase-service-account-key.json.json
