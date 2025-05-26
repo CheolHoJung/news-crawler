@@ -4,67 +4,78 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strconv" // strconv 패키지 임포트
+	"strconv"
+	"context" 
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 )
 
 func main() {
-	// 1. 설정 로드
+	// 1. Load configurations
 	cfg := LoadConfig()
 
-	// 2. Firebase Firestore 클라이언트 초기화
+	// 2. Initialize Firebase Firestore client
 	err := InitializeFirestoreClient(cfg.FirebaseServiceAccountKeyPath)
 	if err != nil {
-		log.Fatalf("Firebase 초기화 실패: %v", err)
+		log.Fatalf("Failed to initialize Firebase: %v", err)
 	}
 
-	// 3. 뉴스 크롤러 서비스 인스턴스 생성
+	// 3. Create News Crawler Service instance
 	crawlerService := NewNewsCrawlerService(cfg)
 
-	// 4. Fiber 웹 애플리케이션 생성
+	// 4. Create Fiber web application
 	app := fiber.New()
 
-	// 로깅 미들웨어 추가
+	// Add logging middleware
 	app.Use(logger.New())
 
-	// 5. REST API 엔드포인트 정의
-	// POST 요청을 받는 /api/schedule/crawl 엔드포인트
-	// GCP Cloud Scheduler와 같은 외부 스케줄러가 이 엔드포인트를 호출합니다.
-	app.Post("/api/schedule/crawl", func(c *fiber.Ctx) error {
-		log.Println("HTTP 요청을 통해 뉴스 크롤링을 시작합니다...")
-
-		// 'pages' 쿼리 파라미터 읽기 (기본값은 1)
-		pagesStr := c.Query("pages", "1") // 쿼리 파라미터 "pages"를 읽고, 없으면 기본값 "1"
-		pages, err := strconv.Atoi(pagesStr) // 문자열을 정수로 변환
-		if err != nil {
-			log.Printf("잘못된 'pages' 파라미터 값: %s. 기본값 1을 사용합니다.", pagesStr)
-			pages = 1 // 변환 실패 시 기본값 1 사용
+	// Add CORS middleware (might not be strictly necessary for a crawler,
+	// but kept for development convenience or if other services call this API)
+	app.Use(func(c *fiber.Ctx) error {
+		c.Set("Access-Control-Allow-Origin", "*") 
+		c.Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS") // GET is no longer used, can be removed
+		c.Set("Access-Control-Allow-Headers", "Origin, Content-Type, Accept")
+		if c.Method() == "OPTIONS" {
+			return c.SendStatus(fiber.StatusNoContent)
 		}
-
-		// 페이지 수 제한 (과도한 요청 방지)
-		if pages <= 0 || pages > 10 { // 1페이지 이상, 10페이지 이하로 제한 (조정 가능)
-			log.Printf("유효하지 않은 페이지 수 요청: %d. 1~10 페이지 범위 내로 제한합니다.", pages)
-			return c.Status(fiber.StatusBadRequest).SendString("유효하지 않은 페이지 수 요청. 1~10 페이지 범위 내로 지정해주세요.")
-		}
-
-		log.Printf("크롤링할 페이지 수: %d", pages)
-
-		_, err = crawlerService.CrawlNaverFinanceNews(pages) // 파라미터로 받은 페이지 수 전달
-		if err != nil {
-			log.Printf("뉴스 크롤링 작업 중 오류 발생: %v", err)
-			return c.Status(fiber.StatusInternalServerError).SendString(fmt.Sprintf("뉴스 크롤링 작업 중 오류 발생: %v", err))
-		}
-		log.Println("HTTP 요청을 통한 뉴스 크롤링 작업 완료.")
-		return c.Status(fiber.StatusOK).SendString(fmt.Sprintf("뉴스 크롤링 작업이 성공적으로 트리거되었습니다. (크롤링 페이지: %d)", pages))
+		return c.Next()
 	})
 
-	// 6. 서버 시작
+	// 5. Define REST API Endpoints
+
+	// News crawling trigger endpoint (for Cloud Scheduler)
+	app.Post("/api/schedule/crawl", func(c *fiber.Ctx) error {
+		log.Println("HTTP request received to start news crawling...")
+
+		pagesStr := c.Query("pages", "1") 
+		pages, err := strconv.Atoi(pagesStr) 
+		if err != nil {
+			log.Printf("Invalid 'pages' parameter value: %s. Using default of 1.", pagesStr)
+			pages = 1 
+		}
+
+		if pages <= 0 || pages > 10 { 
+			log.Printf("Invalid number of pages requested: %d. Limited to 1-10 pages.", pages)
+			return c.Status(fiber.StatusBadRequest).SendString("Invalid number of pages requested. Please specify within 1-10 pages.")
+		}
+
+		log.Printf("Crawling %d pages.", pages)
+
+		_, err = crawlerService.CrawlNaverFinanceNews(pages) 
+		if err != nil {
+			log.Printf("Error during news crawling operation: %v", err)
+			return c.Status(fiber.StatusInternalServerError).SendString(fmt.Sprintf("Error during news crawling operation: %v", err))
+		}
+		log.Println("News crawling operation completed via HTTP request.")
+		return c.Status(fiber.StatusOK).SendString(fmt.Sprintf("News crawling operation successfully triggered. (Pages crawled: %d)", pages))
+	})
+
+	// 6. Start the server
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080" // 기본 포트
+		port = "8080" 
 	}
-	log.Printf("서버가 포트 %s에서 시작됩니다...", port)
+	log.Printf("Crawler server starting on port %s...", port)
 	log.Fatal(app.Listen(":" + port))
 }

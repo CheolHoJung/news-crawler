@@ -33,5 +33,3 @@ firebase-service-account-key.json
 # If you store other sensitive files in the root, add them here:
 # .env
 # config.yaml
-
-firebase-service-account-key.json.json
