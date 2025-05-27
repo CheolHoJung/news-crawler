@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"strconv"
-	"context" 
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -33,7 +32,7 @@ func main() {
 	// Add CORS middleware (might not be strictly necessary for a crawler,
 	// but kept for development convenience or if other services call this API)
 	app.Use(func(c *fiber.Ctx) error {
-		c.Set("Access-Control-Allow-Origin", "*") 
+		c.Set("Access-Control-Allow-Origin", "*")
 		c.Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS") // GET is no longer used, can be removed
 		c.Set("Access-Control-Allow-Headers", "Origin, Content-Type, Accept")
 		if c.Method() == "OPTIONS" {
@@ -48,21 +47,21 @@ func main() {
 	app.Post("/api/schedule/crawl", func(c *fiber.Ctx) error {
 		log.Println("HTTP request received to start news crawling...")
 
-		pagesStr := c.Query("pages", "1") 
-		pages, err := strconv.Atoi(pagesStr) 
+		pagesStr := c.Query("pages", "1")
+		pages, err := strconv.Atoi(pagesStr)
 		if err != nil {
 			log.Printf("Invalid 'pages' parameter value: %s. Using default of 1.", pagesStr)
-			pages = 1 
+			pages = 1
 		}
 
-		if pages <= 0 || pages > 10 { 
+		if pages <= 0 || pages > 10 {
 			log.Printf("Invalid number of pages requested: %d. Limited to 1-10 pages.", pages)
 			return c.Status(fiber.StatusBadRequest).SendString("Invalid number of pages requested. Please specify within 1-10 pages.")
 		}
 
 		log.Printf("Crawling %d pages.", pages)
 
-		_, err = crawlerService.CrawlNaverFinanceNews(pages) 
+		_, err = crawlerService.CrawlNaverFinanceNews(pages)
 		if err != nil {
 			log.Printf("Error during news crawling operation: %v", err)
 			return c.Status(fiber.StatusInternalServerError).SendString(fmt.Sprintf("Error during news crawling operation: %v", err))
@@ -74,7 +73,7 @@ func main() {
 	// 6. Start the server
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080" 
+		port = "8080"
 	}
 	log.Printf("Crawler server starting on port %s...", port)
 	log.Fatal(app.Listen(":" + port))
