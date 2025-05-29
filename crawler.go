@@ -26,13 +26,14 @@ import (
 
 // NewsArticle struct represents a news article.
 type NewsArticle struct {
-	Title       string    `firestore:"title"`
-	Summary     string    `firestore:"summary"`
-	Content     string    `firestore:"content"`   // Original content
-	AISummary   string    `firestore:"aiSummary"` // AI summary (filled by summarization server)
-	Source      string    `firestore:"source"`
-	URL         string    `firestore:"url"`
-	CollectedAt time.Time `firestore:"collectedAt"`
+	Title             string    `firestore:"title"`
+	Summary           string    `firestore:"summary"`
+	Content           string    `firestore:"content"`   // Original content
+	AISummary         string    `firestore:"aiSummary"` // AI summary (filled by summarization server)
+	Source            string    `firestore:"source"`
+	URL               string    `firestore:"url"`
+	CollectedAt       time.Time `firestore:"collectedAt"`
+	SummaryRetryCount int       `firestore:"summaryRetryCount"`
 }
 
 // Firestore client instance
@@ -480,13 +481,14 @@ func (s *NewsCrawlerService) CrawlNaverFinanceNews(pages int) ([]NewsArticle, er
 			fullArticleURL = cleanUTF8String(fullArticleURL)
 
 			newsArticle := NewsArticle{
-				Title:       title,
-				Summary:     summaryText,
-				Content:     fullContent,
-				AISummary:   "", // Crawler explicitly sets AI summary to empty.
-				Source:      sourceText,
-				URL:         fullArticleURL,
-				CollectedAt: time.Now(),
+				Title:             title,
+				Summary:           summaryText,
+				Content:           fullContent,
+				AISummary:         "", // Crawler explicitly sets AI summary to empty.
+				Source:            sourceText,
+				URL:               fullArticleURL,
+				CollectedAt:       time.Now(),
+				SummaryRetryCount: 0, // 기본값 0으로 설정
 			}
 
 			err = s_crawler.saveArticleToFirestore(newsArticle)

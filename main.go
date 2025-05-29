@@ -73,7 +73,7 @@ func main() {
 	// 6. Start the server
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080"
+		port = "8888"
 	}
 	log.Printf("Crawler server starting on port %s...", port)
 	log.Fatal(app.Listen(":" + port))
